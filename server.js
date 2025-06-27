@@ -19,7 +19,6 @@ app.use('/categories', categoryRoutes);
 app.use('/transactions', transactionRoutes);
 app.use('/saving_goals', savingGoalRoutes);
 app.use('/funds', fundRoutes);
-=======
 
 const PORT = 3000;
 app.listen(PORT, () => {
