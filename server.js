@@ -8,6 +8,7 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+<<<<<<< Updated upstream
 app.get('/users', async (req, res) => {
   try {
     const [rows] = await db.query('SELECT * FROM users');
@@ -29,6 +30,20 @@ app.post('/users', async (req, res) => {
     res.status(500).send(err.message);
   }
 });
+=======
+const userRoutes = require('./routes/user');
+const categoryRoutes = require('./routes/category');
+const transactionRoutes = require('./routes/transaction');
+const savingGoalRoutes = require('./routes/savingGoal');
+const fundRoutes = require('./routes/fund');
+
+// Mount routes
+app.use('/users', userRoutes);
+app.use('/categories', categoryRoutes);
+app.use('/transactions', transactionRoutes);
+app.use('/saving_goals', savingGoalRoutes);
+app.use('/funds', fundRoutes);
+>>>>>>> Stashed changes
 
 const PORT = 3000;
 app.listen(PORT, () => {
