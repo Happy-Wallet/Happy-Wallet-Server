@@ -40,8 +40,6 @@ PORT=3000
 
 🚀 Khởi động server
 bash
-Sao chép
-Chỉnh sửa
 node server.js
 Server sẽ chạy tại địa chỉ: http://localhost:3000
 
