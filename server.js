@@ -2,14 +2,23 @@
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const db = require('./db');
+
+const userRoutes = require('./routes/user');
+const categoryRoutes = require('./routes/category');
+const transactionRoutes = require('./routes/transaction');
+const savingGoalRoutes = require('./routes/savingGoal');
+const fundRoutes = require('./routes/fund');
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// Mount user routes at /users
-app.use('/users', userRoutes); // ✅ now handles GET and POST /users
+// Mount routes
+app.use('/users', userRoutes);
+app.use('/categories', categoryRoutes);
+app.use('/transactions', transactionRoutes);
+app.use('/saving_goals', savingGoalRoutes);
+app.use('/funds', fundRoutes);
 
 const PORT = 3000;
 app.listen(PORT, () => {
