@@ -8,6 +8,7 @@ const categoryRoutes = require('./routes/category');
 const transactionRoutes = require('./routes/transaction');
 const savingGoalRoutes = require('./routes/savingGoal');
 const fundRoutes = require('./routes/fund');
+const authRoutes = require("./routes/auth");
 
 const app = express();
 app.use(cors());
@@ -19,6 +20,8 @@ app.use('/categories', categoryRoutes);
 app.use('/transactions', transactionRoutes);
 app.use('/saving_goals', savingGoalRoutes);
 app.use('/funds', fundRoutes);
+app.use("/auth", authRoutes);
+app.use(express.json());
 
 const PORT = 3000;
 app.listen(PORT, () => {
