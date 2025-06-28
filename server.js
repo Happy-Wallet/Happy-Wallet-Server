@@ -1,7 +1,7 @@
 // server.js
-const express = require("express");
-const cors = require("cors");
-const bodyParser = require("body-parser");
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
 
 const userRoutes = require('./routes/user');
 const categoryRoutes = require('./routes/category');
@@ -15,7 +15,7 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // Mount routes
-app.use("/users", userRoutes);
+app.use('/users', userRoutes);
 app.use('/categories', categoryRoutes);
 app.use('/transactions', transactionRoutes);
 app.use('/saving_goals', savingGoalRoutes);

@@ -1,8 +1,8 @@
 // Load environment variables from .env
-require("dotenv").config();
+require('dotenv').config();
 
 // Import mysql2 library
-const mysql = require("mysql2/promise");
+const mysql = require('mysql2/promise');
 
 // Create connection pool
 const pool = mysql.createPool({
