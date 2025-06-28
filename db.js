@@ -16,10 +16,5 @@ const pool = mysql.createPool({
   queueLimit: 0
 });
 
-// Debug logging
-console.log("Connecting to MySQL with:");
-console.log("DB user:", process.env.DB_USER);
-console.log("DB password:", process.env.DB_PASSWORD ? "✅ set" : "❌ missing");
-
 // Export promise-based pool for async/await use
 module.exports = pool.promise();
