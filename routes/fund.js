@@ -2,14 +2,16 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 
+// GET /funds
 router.get("/", async (req, res) => {
   const [rows] = await db.query("SELECT * FROM funds");
   res.json(rows);
 });
 
+// POST /funds
 router.post("/", async (req, res) => {
   const {
-    icon_id,
+    category_id,
     name,
     current_amount,
     has_target,
@@ -17,19 +19,19 @@ router.post("/", async (req, res) => {
     description,
   } = req.body;
 
-  if (!icon_id || !name || current_amount == null) {
+  if (!category_id || !name || current_amount == null) {
     return res.status(400).json({
-      error: "Missing required fields: icon_id, name, current_amount",
+      error: "Missing required fields: category_id, name, current_amount",
     });
   }
 
   try {
     const [result] = await db.query(
       `INSERT INTO funds 
-        (icon_id, name, current_amount, has_target, target_amount, description) 
+        (category_id, name, current_amount, has_target, target_amount, description) 
        VALUES (?, ?, ?, ?, ?, ?)`,
       [
-        icon_id,
+        category_id,
         name,
         current_amount,
         has_target == null ? 1 : has_target,

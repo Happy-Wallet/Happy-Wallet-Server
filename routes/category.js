@@ -2,21 +2,33 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 
+// GET /categories
 router.get("/", async (req, res) => {
   const [rows] = await db.query("SELECT * FROM categories");
   res.json(rows);
 });
 
-router.post("/", async (req, res) => {
-  const { user_id, icon_id, name, is_default } = req.body;
-  if (!icon_id) {
-    return res.status(400).json({ error: "icon_id is required" });
+// POST /categories
+router.post('/', async (req, res) => {
+  const { user_id, name, type, icon_res, color_res, is_default } = req.body;
+
+  try {
+    const [result] = await db.query(
+      `INSERT INTO categories (user_id, name, type, icon_res, color_res, is_default, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        user_id, 
+        name, 
+        type, 
+        icon_res, 
+        color_res, 
+        is_default 
+      ]
+    );
+    res.status(201).json({ id: result.insertId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-  const [result] = await db.query(
-    "INSERT INTO categories (user_id, icon_id, name, is_default, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(), NOW())",
-    [user_id, icon_id, name, is_default]
-  );
-  res.json({ id: result.insertId });
 });
 
 module.exports = router;
