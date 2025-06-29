@@ -115,12 +115,10 @@ router.get("/", (req, res) => {
         <p><span class="method">POST</span> <span class="endpoint">/saving_goals</span></p>
         <pre>{
   "user_id": 1,
+  "icon_id": 2,
   "name": "Mua laptop",
-  "amount": 2000000,
-  "target": 10000000,
-  "description": "MacBook",
-  "start_date": "2025-06-01",
-  "end_date": "2025-12-31"
+  "current_amount": 3000000,
+  "target_amount": 20000000
 }</pre>
 
         <h2>👥 Funds</h2>
