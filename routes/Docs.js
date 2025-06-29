@@ -125,10 +125,12 @@ router.get("/", (req, res) => {
         <p><span class="method">GET</span> <span class="endpoint">/funds</span></p>
         <p><span class="method">POST</span> <span class="endpoint">/funds</span></p>
         <pre>{
-  "name": "Quỹ nhóm",
-  "amount": 100000,
-  "members": ["user1", "user2"],
-  "description": "Du lịch Đà Lạt"
+  "icon_id": 3,
+  "name": "Quỹ du lịch",
+  "current_amount": 500000,
+  "has_target": 1,
+  "target_amount": 10000000,
+  "description": "Tiết kiệm để đi Đà Lạt"
 }</pre>
 
       </body>

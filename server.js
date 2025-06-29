@@ -10,7 +10,7 @@ const savingGoalRoutes = require("./routes/savingGoal");
 const fundRoutes = require("./routes/fund");
 const authRoutes = require("./routes/auth");
 const iconRoutes = require("./routes/icon");
-const iconDocsRoutes = require("./routes/iconDocs");
+const iconDocsRoutes = require("./routes/Docs");
 
 const app = express();
 app.use(cors());
@@ -24,7 +24,7 @@ app.use("/saving_goals", savingGoalRoutes);
 app.use("/funds", fundRoutes);
 app.use("/auth", authRoutes);
 app.use("/icons", iconRoutes);
-app.use("/docs/icons", iconDocsRoutes);
+app.use("/docs", iconDocsRoutes);
 
 app.use(express.json());
 
