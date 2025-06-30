@@ -2,26 +2,35 @@ const express = require("express");
 const router = express.Router();
 const db = require("../config/db");
 
+// GET /savingGoals
 router.get("/", async (req, res) => {
   const [rows] = await db.query("SELECT * FROM saving_goals");
   res.json(rows);
 });
 
+// POST /savingGoals
 router.post("/", async (req, res) => {
-  const { user_id, icon_id, name, current_amount, target_amount } = req.body;
+  const { user_id, category_id, name, description, current_amount, target_amount, target_date } = req.body;
 
-  if (!user_id || !icon_id || !name || current_amount == null) {
+  if (!user_id || !category_id || !name || current_amount == null) {
     return res.status(400).json({
-      error: "Missing required fields: user_id, icon_id, name, current_amount",
+      error: "Missing required fields: user_id, category_id, name, current_amount",
     });
   }
 
   try {
     const [result] = await db.query(
       `INSERT INTO saving_goals 
-        (user_id, icon_id, name, current_amount, target_amount) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [user_id, icon_id, name, current_amount, target_amount || 0]
+        (user_id, category_id, name, description, current_amount, target_amount, target_date) 
+       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+      [
+        user_id, 
+        category_id, 
+        name, 
+        description, 
+        current_amount, 
+        target_amount || 0, 
+        target_date]
     );
     res
       .status(201)

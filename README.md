@@ -54,16 +54,26 @@ POST	/reset-password	Đặt lại mật khẩu với token
 pgsql
 
 Happy-Wallet-Server/
-├── controllers/
-│   └── authController.js
-├── routes/
-│   └── auth.js
 ├── config/
-│   └── db.js
+│   ├──db.js
+│   └──mailConfig.js
+├── controllers/
+│   ├──authController.js
+│   └──iconController.js
+├── routes/
+│   ├── auth.js
+│   ├── category.js
+│   ├── Docs.js
+│   ├── fund.js
+│   ├── icon.js
+│   ├── savingGoal.js
+│   ├── transaction.js
+│   └── user.js
 ├── server.js
 ├── .env
 ├── .gitignore
 ├── package.json
+├── package-lock.json
 └── README.md
 🧰 Dependencies chính
 express – Framework xây dựng web API
