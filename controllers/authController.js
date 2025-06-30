@@ -17,7 +17,7 @@ exports.register = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
     await db.query(
-      "INSERT INTO users (email, username, password) VALUES (?, ?, ?)",
+      "INSERT INTO users (email, username, hashed_password) VALUES (?, ?, ?)",
       [email, username, hashedPassword]
     );
     res.status(201).json({ message: "User registered successfully" });
@@ -27,16 +27,18 @@ exports.register = async (req, res) => {
 };
 
 exports.login = async (req, res) => {
-  const { email, password } = req.body;
+  const { username, password } = req.body; // SỬA từ email → username
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [
-      email,
+    const [rows] = await db.query("SELECT * FROM users WHERE username = ?", [
+      username,
     ]);
     if (rows.length === 0)
       return res.status(400).json({ message: "User not found" });
 
     const user = rows[0];
-    const isMatch = await bcrypt.compare(password, user.password);
+
+    // SỬA tên cột hashed_password
+    const isMatch = await bcrypt.compare(password, user.hashed_password);
     if (!isMatch)
       return res.status(401).json({ message: "Invalid credentials" });
 
