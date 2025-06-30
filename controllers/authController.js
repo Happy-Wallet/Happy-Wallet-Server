@@ -7,7 +7,7 @@ const sendEmail = require("../utils/sendEmail");
 const JWT_SECRET = "your_secret_key"; // nên lưu vào .env
 
 exports.register = async (req, res) => {
-  const { email, username, password } = req.body;
+  const { email, username, password, date_of_birth } = req.body;
   try {
     const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [
       email,
@@ -16,11 +16,28 @@ exports.register = async (req, res) => {
       return res.status(400).json({ message: "Email already exists" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
-    await db.query(
-      "INSERT INTO users (email, username, hashed_password) VALUES (?, ?, ?)",
-      [email, username, hashedPassword]
+
+    const result = await db.query(
+      "INSERT INTO users (email, username, hashed_password, date_of_birth) VALUES (?, ?, ?, ?)",
+      [email, username, hashedPassword, date_of_birth]
     );
-    res.status(201).json({ message: "User registered successfully" });
+
+    const insertedId = result[0].insertId;
+    const [newUserRows] = await db.query(
+      "SELECT * FROM users WHERE user_id = ?",
+      [insertedId]
+    );
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: {
+        user_id: insertedId,
+        email: newUserRows[0].email,
+        username: newUserRows[0].username,
+        date_of_birth: newUserRows[0].date_of_birth,
+        created_at: newUserRows[0].created_at,
+      },
+    });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
