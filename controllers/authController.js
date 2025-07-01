@@ -1,10 +1,10 @@
-const bcrypt = require("bcryptjs");
+const bcrypt = require("bcryptjs"); 
 const jwt = require("jsonwebtoken");
 const db = require("../config/db");
 const sendEmail = require("../utils/sendEmail");
+require('dotenv').config(); 
 
-// Secret key cho JWT
-const JWT_SECRET = "your_secret_key"; // nên lưu vào .env
+const JWT_SECRET = process.env.JWT_SECRET;
 
 exports.register = async (req, res) => {
   const { email, username, password, date_of_birth } = req.body;
@@ -83,8 +83,8 @@ exports.forgotPassword = async (req, res) => {
     if (rows.length === 0)
       return res.status(404).json({ message: "Email not found" });
 
-    const otp = Math.floor(1000 + Math.random() * 9000).toString(); // mã 4 số
-    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 phút hết hạn
+    const otp = Math.floor(1000 + Math.random() * 9000).toString(); 
+    const expiresAt = Date.now() + 10 * 60 * 1000; 
 
     otpStore.set(email, { otp, expiresAt, isUsed: false });
 
@@ -107,17 +107,25 @@ exports.forgotPassword = async (req, res) => {
 };
 
 exports.resetPassword = async (req, res) => {
-  const { token, newPassword } = req.body;
-  try {
-    const decoded = jwt.verify(token, JWT_SECRET);
-    const hashed = await bcrypt.hash(newPassword, 10);
+  const { email, otp, newPassword } = req.body; 
 
-    await db.query("UPDATE users SET password = ? WHERE email = ?", [
-      hashed,
-      decoded.email,
+  try {
+    const storedOtpData = otpStore.get(email);
+
+    if (!storedOtpData || storedOtpData.otp !== otp || storedOtpData.isUsed || Date.now() > storedOtpData.expiresAt) {
+      return res.status(400).json({ error: "Invalid or expired OTP." });
+    }
+    otpStore.set(email, { ...storedOtpData, isUsed: true }); 
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    await db.query("UPDATE users SET hashed_password = ? WHERE email = ?", [
+      hashedPassword, 
+      email, 
     ]);
     res.json({ message: "Password updated successfully" });
   } catch (err) {
-    res.status(400).json({ error: "Invalid or expired token" });
+    console.error("Reset password error:", err); 
+    res.status(500).json({ error: "Server error during password reset." }); 
   }
 };
