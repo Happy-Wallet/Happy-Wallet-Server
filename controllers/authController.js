@@ -9,19 +9,24 @@ const JWT_SECRET = "your_secret_key"; // nên lưu vào .env
 exports.register = async (req, res) => {
   const { email, username, password, date_of_birth } = req.body;
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
     if (rows.length > 0)
       return res.status(400).json({ message: "Email already exists" });
 
-    const hashedPassword = await bcrypt.hash(password, 10); 
+    const hashedPassword = await bcrypt.hash(password, 10);
 
     const result = await db.query(
-      "INSERT INTO users (email, username, hashed_password, date_of_birth) VALUES (?, ?, ?, ?)", 
+      "INSERT INTO users (email, username, hashed_password, date_of_birth) VALUES (?, ?, ?, ?)",
       [email, username, hashedPassword, date_of_birth]
     );
 
     const insertedId = result[0].insertId;
-    const [newUserRows] = await db.query("SELECT * FROM users WHERE user_id = ?", [insertedId]);
+    const [newUserRows] = await db.query(
+      "SELECT * FROM users WHERE user_id = ?",
+      [insertedId]
+    );
 
     res.status(201).json({
       message: "User registered successfully",
@@ -37,7 +42,6 @@ exports.register = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 exports.login = async (req, res) => {
   const { email, password } = req.body;
@@ -73,7 +77,9 @@ exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
 
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [
+      email,
+    ]);
     if (rows.length === 0)
       return res.status(404).json({ message: "Email not found" });
 
@@ -89,14 +95,16 @@ exports.forgotPassword = async (req, res) => {
       <p>Mã có hiệu lực trong 10 phút.</p>
     `;
 
-    await sendEmail(email, "Mã OTP khôi phục mật khẩu - Happy Wallet", htmlContent);
+    await sendEmail(
+      email,
+      "Mã OTP khôi phục mật khẩu - Happy Wallet",
+      htmlContent
+    );
     res.json({ message: "OTP sent to email" });
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
-
 
 exports.resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;

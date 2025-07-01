@@ -10,7 +10,6 @@ const transactionRoutes = require("./routes/transaction");
 const savingGoalRoutes = require("./routes/savingGoal");
 const fundRoutes = require("./routes/fund");
 const authRoutes = require("./routes/auth");
-const iconRoutes = require("./routes/icon");
 const iconDocsRoutes = require("./routes/Docs");
 const settingRoutes = require("./routes/setting");
 
@@ -25,7 +24,6 @@ app.use("/transactions", transactionRoutes);
 app.use("/saving_goals", savingGoalRoutes);
 app.use("/funds", fundRoutes);
 app.use("/auth", authRoutes);
-app.use("/icons", iconRoutes);
 app.use("/docs", iconDocsRoutes);
 app.use("/settings", settingRoutes);
 
