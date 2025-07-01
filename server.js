@@ -2,6 +2,7 @@
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
+require("dotenv").config();
 
 const userRoutes = require("./routes/user");
 const categoryRoutes = require("./routes/category");
@@ -11,6 +12,7 @@ const fundRoutes = require("./routes/fund");
 const authRoutes = require("./routes/auth");
 const iconRoutes = require("./routes/icon");
 const iconDocsRoutes = require("./routes/Docs");
+const settingRoutes = require("./routes/setting");
 
 const app = express();
 app.use(cors());
@@ -25,6 +27,7 @@ app.use("/funds", fundRoutes);
 app.use("/auth", authRoutes);
 app.use("/icons", iconRoutes);
 app.use("/docs", iconDocsRoutes);
+app.use("/settings", settingRoutes);
 
 app.use(express.json());
 
