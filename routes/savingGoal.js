@@ -22,15 +22,16 @@ router.post("/", async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO saving_goals 
         (user_id, category_id, name, description, current_amount, target_amount, target_date) 
-       VALUES (?, ?, ?, ?, ?, ?, NOW())`,
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         user_id, 
         category_id, 
         name, 
         description, 
-        current_amount, 
-        target_amount || 0, 
-        target_date]
+        current_amount || 0, 
+        target_amount, 
+        target_date || new Date() // nếu client không gửi date, hệ thống tự lấy NOW()
+      ]
     );
     res
       .status(201)
