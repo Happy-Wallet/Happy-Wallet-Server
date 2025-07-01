@@ -2,6 +2,7 @@ const db = require("../config/db");
 const cloudinary = require("../utils/cloudinary");
 const multer = require("multer");
 const streamifier = require("streamifier");
+const bcrypt = require("bcrypt"); // Add this line
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
