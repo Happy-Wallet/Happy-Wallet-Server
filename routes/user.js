@@ -2,6 +2,7 @@
 const express = require("express");
 const router = express.Router();
 const db = require('../config/db');
+const bcrypt = require('bcrypt');
 
 // GET /users
 router.get("/", async (req, res) => {
@@ -14,14 +15,16 @@ router.get("/", async (req, res) => {
 });
 
 // POST /users
-router.post("/", async (req, res) => {
-  const { email, username, role } = req.body;
+router.post('/', async (req, res) => {
+  const { email, username, password, date_of_birth } = req.body;
   try {
+    const hashedPassword = await bcrypt.hash(password, 10);
     const [result] = await db.query(
-      "INSERT INTO users (email, username, role, created_at, updated_at) VALUES (?, ?, ?, NOW(), NOW())",
-      [email, username, role]
+      `INSERT INTO users (email, username, hashed_password, date_of_birth, created_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [email, username, hashedPassword, date_of_birth]
     );
-    res.json({ id: result.insertId });
+    res.status(201).json({ id: result.insertId });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
