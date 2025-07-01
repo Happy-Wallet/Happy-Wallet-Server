@@ -49,7 +49,7 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "User not found" });
 
     const user = rows[0];
-    const isMatch = await bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.hashed_password);
     if (!isMatch)
       return res.status(401).json({ message: "Invalid credentials" });
 
@@ -67,38 +67,36 @@ exports.login = async (req, res) => {
   }
 };
 
+const otpStore = require("../utils/otpStore");
+
 exports.forgotPassword = async (req, res) => {
   const { email } = req.body;
+
   try {
-    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [
-      email,
-    ]);
+    const [rows] = await db.query("SELECT * FROM users WHERE email = ?", [email]);
     if (rows.length === 0)
       return res.status(404).json({ message: "Email not found" });
 
-    const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "15m" });
-    const resetLink = `http://localhost:3000/auth/reset-password?token=${token}`;
+    const otp = Math.floor(1000 + Math.random() * 9000).toString(); // mã 4 số
+    const expiresAt = Date.now() + 10 * 60 * 1000; // 10 phút hết hạn
 
-    // Custom HTML content
+    otpStore.set(email, { otp, expiresAt, isUsed: false });
+
     const htmlContent = `
-      <div style="font-family: Arial, sans-serif; padding: 20px;">
-        <h2 style="color: #007bff;">Yêu cầu đặt lại mật khẩu</h2>
-        <p>Xin chào <b>${rows[0].username}</b>,</p>
-        <p>Bạn vừa yêu cầu đặt lại mật khẩu cho tài khoản Happy Wallet của mình.</p>
-        <p>Nhấn vào nút bên dưới để tiến hành đặt lại mật khẩu:</p>
-        <a href="${resetLink}" style="display: inline-block; padding: 10px 20px; background-color: #28a745; color: #fff; text-decoration: none; border-radius: 5px;">Đặt lại mật khẩu</a>
-        <p style="margin-top: 20px;">Nếu bạn không yêu cầu điều này, vui lòng bỏ qua email này.</p>
-        <hr>
-        <p style="font-size: 12px; color: #888;">Happy Wallet - Quản lý chi tiêu hiệu quả cùng bạn.</p>
-      </div>
+      <h3>Khôi phục mật khẩu</h3>
+      <p>Mã OTP của bạn là:</p>
+      <h2 style="color: #28a745;">${otp}</h2>
+      <p>Mã có hiệu lực trong 10 phút.</p>
     `;
 
-    await sendEmail(email, "Khôi phục mật khẩu - Happy Wallet", htmlContent);
-    res.json({ message: "Reset link sent to email" });
+    await sendEmail(email, "Mã OTP khôi phục mật khẩu - Happy Wallet", htmlContent);
+    res.json({ message: "OTP sent to email" });
+
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 };
+
 
 exports.resetPassword = async (req, res) => {
   const { token, newPassword } = req.body;

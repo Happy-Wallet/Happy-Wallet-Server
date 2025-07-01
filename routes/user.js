@@ -16,14 +16,13 @@ router.get("/", async (req, res) => {
 
 // POST /users
 router.post('/', async (req, res) => {
-  const { email, username, password, role, date_of_birth } = req.body;
-
+  const { email, username, password, date_of_birth } = req.body;
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
     const [result] = await db.query(
-      `INSERT INTO users (email, username, hashed_password, role, date_of_birth, created_at)
-       VALUES (?, ?, ?, ?, ?, NOW())`,
-      [email, username, hashedPassword, role || 'user', date_of_birth]
+      `INSERT INTO users (email, username, hashed_password, date_of_birth, created_at)
+       VALUES (?, ?, ?, ?, NOW())`,
+      [email, username, hashedPassword, date_of_birth]
     );
     res.status(201).json({ id: result.insertId });
   } catch (err) {
