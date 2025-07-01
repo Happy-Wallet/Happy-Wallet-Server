@@ -99,21 +99,17 @@ exports.forgotPassword = async (req, res) => {
 
 
 exports.resetPassword = async (req, res) => {
-  const { email, otp, newPassword } = req.body;
-
-  const record = otpStore.get(email);
-  if (!record || record.isUsed || Date.now() > record.expiresAt || record.otp !== otp) {
-    return res.status(400).json({ message: "OTP không hợp lệ hoặc đã hết hạn" });
-  }
-
+  const { token, newPassword } = req.body;
   try {
+    const decoded = jwt.verify(token, JWT_SECRET);
     const hashed = await bcrypt.hash(newPassword, 10);
-    await db.query("UPDATE users SET hashed_password = ? WHERE email = ?", [hashed, email]);
 
-    record.isUsed = true;
-    res.json({ message: "Password reset successfully" });
-
+    await db.query("UPDATE users SET password = ? WHERE email = ?", [
+      hashed,
+      decoded.email,
+    ]);
+    res.json({ message: "Password updated successfully" });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(400).json({ error: "Invalid or expired token" });
   }
 };
