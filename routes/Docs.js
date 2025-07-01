@@ -83,19 +83,55 @@ router.get("/", (req, res) => {
         <p><span class="method">GET</span> <span class="endpoint">/users</span></p>
         <p><span class="method">POST</span> <span class="endpoint">/users</span></p>
         <pre>{
-  "email": "new@example.com",
-  "username": "newuser",
-  "role": "user"
+  "email": "testuser@example.com",
+  "username": "testuser",
+  "password": "1234",
+  "date_of_birth": "2009-09-20"
 }</pre>
 
+        <pre>{
+    "email": "tonydarkness@gmail.com",
+    "username": "Tonydarkness",
+    "password": "844852duy",
+    "date_of_birth": "2004-08-01"
+}</pre>
         <h2>📂 Categories</h2>
         <p><span class="method">GET</span> <span class="endpoint">/categories</span></p>
         <p><span class="method">POST</span> <span class="endpoint">/categories</span></p>
         <pre>{
-  "user_id": 1,
-  "icon_id": 2,
-  "name": "Một category",
-  "is_default": 0
+    "user_id" : 1,
+    "name" : "Ăn uống",
+    "type" : "expense",
+    "icon_res" : "123",
+    "color_res" : "21",
+    "is_default" : true
+}</pre>
+
+<pre>{
+    "user_id" : 2,
+    "name" : "Mua sắm",
+    "type" : "expense",
+    "icon_res" : "231",
+    "color_res" : "211",
+    "is_default" : true
+}</pre>
+
+<pre>{
+    "user_id" : 2,
+    "name" : "Giải trí",
+    "type" : "expense",
+    "icon_res" : "222",
+    "color_res" : "156",
+    "is_default" : true
+}</pre>
+
+<pre>{
+    "user_id" : 2,
+    "name" : "Lương",
+    "type" : "income",
+    "icon_res" : "250",
+    "color_res" : "623",
+    "is_default" : true
 }</pre>
 
         <h2>💸 Transactions</h2>
@@ -103,34 +139,53 @@ router.get("/", (req, res) => {
         <p><span class="method">POST</span> <span class="endpoint">/transactions</span></p>
         <pre>{
   "user_id": 1,
-  "category_id": 6,
-  "icon_id": 3,
-  "amount": 150.75,
-  "description": "Mua cà phê",
-  "date": "2025-06-29 10:30:00"
+  "category_id": 1,
+  "amount": 150000,
+  "description": "Ăn trưa",
+  "date": "2025-06-29 10:30:00",
+  "type" : "expense"
+}</pre>
+
+<pre>{
+  "user_id" : 3,
+  "category_id" : 1,
+  "amount" : 150000,
+  "date" : "2025-07-01",
+  "type" : "expense"
+}</pre>
+
+<pre>{
+  "user_id" : 3,
+  "category_id" : 4,
+  "amount" : 200000,
+  "description": "Lương",
+  "date" : "2025-07-01",
+  "type" : "income"
 }</pre>
 
         <h2>🎯 Saving Goals</h2>
         <p><span class="method">GET</span> <span class="endpoint">/saving_goals</span></p>
         <p><span class="method">POST</span> <span class="endpoint">/saving_goals</span></p>
         <pre>{
-  "user_id": 1,
-  "icon_id": 2,
-  "name": "Mua laptop",
-  "current_amount": 3000000,
-  "target_amount": 20000000
+  "user_id" : 2,
+  "category_id" : 4,
+  "name" : "Tiền mua nhà",
+  "description": "Nhịn uống trà sữa để mua nhà!",
+  "current_amount" : 20000,
+  "target_amount" : 1000000000,
+  "target_date" : "2027-01-01"
 }</pre>
 
         <h2>👥 Funds</h2>
         <p><span class="method">GET</span> <span class="endpoint">/funds</span></p>
         <p><span class="method">POST</span> <span class="endpoint">/funds</span></p>
         <pre>{
-  "icon_id": 3,
-  "name": "Quỹ du lịch",
-  "current_amount": 500000,
-  "has_target": 1,
-  "target_amount": 10000000,
-  "description": "Tiết kiệm để đi Đà Lạt"
+  "category_id" : 4,
+  "name" : "Quỹ đi Đà Lạt",
+  "description": "Đi Đà Lạt thôi nào mọi người!",
+  "current_amount" : 20000,
+  "has_target" : true,
+  "target_amount" : 1000000000
 }</pre>
 
       </body>
