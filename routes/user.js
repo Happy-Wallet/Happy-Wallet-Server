@@ -1,8 +1,8 @@
 // routes/user.js
 const express = require("express");
 const router = express.Router();
-const db = require('../config/db');
-const bcrypt = require('bcrypt');
+const db = require("../config/db");
+const bcrypt = require("bcrypt");
 
 // GET /users
 router.get("/", async (req, res) => {
@@ -15,7 +15,7 @@ router.get("/", async (req, res) => {
 });
 
 // POST /users
-router.post('/', async (req, res) => {
+router.post("/", async (req, res) => {
   const { email, username, password, role, date_of_birth } = req.body;
 
   try {
@@ -23,7 +23,7 @@ router.post('/', async (req, res) => {
     const [result] = await db.query(
       `INSERT INTO users (email, username, hashed_password, role, date_of_birth, created_at)
        VALUES (?, ?, ?, ?, ?, NOW())`,
-      [email, username, hashedPassword, role || 'user', date_of_birth]
+      [email, username, hashedPassword, role || "user", date_of_birth]
     );
     res.status(201).json({ id: result.insertId });
   } catch (err) {
