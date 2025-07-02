@@ -11,7 +11,7 @@ const savingGoalRoutes = require("./routes/savingGoal");
 const fundRoutes = require("./routes/fund");
 const authRoutes = require("./routes/auth");
 const iconDocsRoutes = require("./routes/Docs");
-const settingRoutes = require("./routes/settings");
+const settingRoutes = require("./routes/setting");
 
 const app = express();
 app.use(cors());
@@ -28,7 +28,6 @@ app.use("/docs", iconDocsRoutes);
 app.use("/settings", settingRoutes);
 
 app.use(express.json());
-
 
 const PORT = 3000;
 app.listen(PORT, () => {
