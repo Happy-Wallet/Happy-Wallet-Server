@@ -30,7 +30,7 @@ router.post("/", async (req, res) => {
         description, 
         current_amount || 0, 
         target_amount, 
-        target_date || new Date() // nếu client không gửi date, hệ thống tự lấy NOW()
+        target_date || new Date() 
       ]
     );
     res
