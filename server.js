@@ -1,7 +1,5 @@
-// server.js
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
 require("dotenv").config();
 
 const userRoutes = require("./routes/user");
@@ -10,12 +8,14 @@ const transactionRoutes = require("./routes/transaction");
 const savingGoalRoutes = require("./routes/savingGoal");
 const fundRoutes = require("./routes/fund");
 const authRoutes = require("./routes/auth");
-const iconDocsRoutes = require("./routes/Docs");
+const iconDocsRoutes = require("./routes/Docs"); 
 const settingRoutes = require("./routes/setting");
+const invitationRoutes = require("./routes/invitation"); 
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
+
+app.use(express.json()); 
 
 // Mount routes
 app.use("/users", userRoutes);
@@ -26,10 +26,9 @@ app.use("/funds", fundRoutes);
 app.use("/auth", authRoutes);
 app.use("/docs", iconDocsRoutes);
 app.use("/settings", settingRoutes);
+app.use("/invitations", invitationRoutes); 
 
-app.use(express.json());
-
-const PORT = 3000;
+const PORT = 3000; 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);
 });
