@@ -11,6 +11,7 @@ const authRoutes = require("./routes/auth");
 const iconDocsRoutes = require("./routes/Docs"); 
 const settingRoutes = require("./routes/setting");
 const invitationRoutes = require("./routes/invitation"); 
+const notificationRoutes = require("./routes/notification");
 
 const app = express();
 app.use(cors());
@@ -27,6 +28,7 @@ app.use("/auth", authRoutes);
 app.use("/docs", iconDocsRoutes);
 app.use("/settings", settingRoutes);
 app.use("/invitations", invitationRoutes); 
+app.use("/notifications", notificationRoutes); 
 
 const PORT = 3000; 
 app.listen(PORT, () => {

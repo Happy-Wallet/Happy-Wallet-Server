@@ -21,8 +21,10 @@ exports.createCategory = async (req, res) => {
   const { icon_res, color_res, name } = req.body;
 
   try {
-    if (!['income', 'expense', 'savingGoal'].includes(type)) {
-      return res.status(400).json({ message: "Invalid category type provided in URL." });
+    if (!["income", "expense", "savingGoal"].includes(type)) {
+      return res
+        .status(400)
+        .json({ message: "Invalid category type provided in URL." });
     }
 
     const result = await db.query(
@@ -46,12 +48,13 @@ exports.createCategory = async (req, res) => {
         icon_res: rows[0].icon_res,
         color_res: rows[0].color_res,
         type: rows[0].type,
-        name: rows[0].name
+        name: rows[0].name,
       });
     } else {
-      res.status(500).json({ error: "Failed to retrieve created category after insertion." });
+      res.status(500).json({
+        error: "Failed to retrieve created category after insertion.",
+      });
     }
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -59,14 +62,16 @@ exports.createCategory = async (req, res) => {
 
 exports.getCategories = async (req, res) => {
   const userId = req.user.userId;
-  const type = req.query.type; 
+  const type = req.query.type;
 
   try {
-    if (type && !['income', 'expense', 'savingGoal'].includes(type)) { 
-      return res.status(400).json({ message: "Invalid category type provided in query." });
+    if (type && !["income", "expense", "savingGoal"].includes(type)) {
+      return res
+        .status(400)
+        .json({ message: "Invalid category type provided in query." });
     }
 
-    const categories = await getCategoriesByTypeAndUser(userId, type); 
+    const categories = await getCategoriesByTypeAndUser(userId, type);
     res.json(categories);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -74,13 +79,13 @@ exports.getCategories = async (req, res) => {
 };
 
 exports.updateCategory = async (req, res) => {
-  const { id } = req.params; 
-  const { icon_res, color_res, name } = req.body; 
+  const { id } = req.params;
+  const { icon_res, color_res, name } = req.body;
   const userId = req.user.userId;
 
   try {
     const [categoryRows] = await db.query(
-      `SELECT user_id, type FROM categories WHERE category_id = ?`, 
+      `SELECT user_id, type FROM categories WHERE category_id = ?`,
       [id]
     );
 
@@ -91,11 +96,15 @@ exports.updateCategory = async (req, res) => {
     const categoryUserId = categoryRows[0].user_id;
 
     if (categoryUserId === null) {
-      return res.status(403).json({ message: "Cannot update default categories." });
+      return res
+        .status(403)
+        .json({ message: "Cannot update default categories." });
     }
 
     if (categoryUserId !== userId) {
-      return res.status(403).json({ message: "Forbidden: You do not own this category." });
+      return res
+        .status(403)
+        .json({ message: "Forbidden: You do not own this category." });
     }
 
     await db.query(
@@ -117,13 +126,12 @@ exports.updateCategory = async (req, res) => {
         user_id: updatedCategoryRows[0].user_id,
         icon_res: updatedCategoryRows[0].icon_res,
         color_res: updatedCategoryRows[0].color_res,
-        type: updatedCategoryRows[0].type, 
-        name: updatedCategoryRows[0].name
+        type: updatedCategoryRows[0].type,
+        name: updatedCategoryRows[0].name,
       });
     } else {
       res.status(500).json({ error: "Failed to retrieve updated category." });
     }
-
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -146,17 +154,18 @@ exports.deleteCategory = async (req, res) => {
     const categoryUserId = categoryRows[0].user_id;
 
     if (categoryUserId === null) {
-      return res.status(403).json({ message: "Cannot delete default categories." });
+      return res
+        .status(403)
+        .json({ message: "Cannot delete default categories." });
     }
 
     if (categoryUserId !== userId) {
-      return res.status(403).json({ message: "Forbidden: You do not own this category." });
+      return res
+        .status(403)
+        .json({ message: "Forbidden: You do not own this category." });
     }
 
-    await db.query(
-      `DELETE FROM categories WHERE category_id = ?`,
-      [id]
-    );
+    await db.query(`DELETE FROM categories WHERE category_id = ?`, [id]);
     res.json({ message: "Category deleted successfully" });
   } catch (err) {
     res.status(500).json({ error: err.message });
