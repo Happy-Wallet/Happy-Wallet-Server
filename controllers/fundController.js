@@ -67,6 +67,38 @@ exports.createFund = async (req, res) => {
   }
 };
 
+exports.getAllFunds = async (req, res) => {
+  const userId = req.user.userId;
+
+  try {
+    const [funds] = await db.query(
+      `SELECT f.*, u.email AS creator_email, u.username AS creator_username, c.name AS category_name
+       FROM funds f
+       JOIN funds_members fm ON f.fund_id = fm.fund_id
+       LEFT JOIN users u ON f.created_by_user_id = u.user_id
+       LEFT JOIN categories c ON f.category_id = c.category_id
+       WHERE fm.user_id = ? AND fm.status = 'accepted'
+       ORDER BY f.created_at DESC`, 
+      [userId]
+    );
+
+    for (let fund of funds) {
+      const [membersRows] = await db.query(
+        `SELECT fm.user_id, fm.role, fm.status, u.email, u.username
+         FROM funds_members fm
+         JOIN users u ON fm.user_id = u.user_id
+         WHERE fm.fund_id = ? AND fm.status = 'accepted'`,
+        [fund.fund_id]
+      );
+      fund.members = membersRows;
+    }
+    res.status(200).json(funds);
+  } catch (error) {
+    console.error('Lỗi khi lấy danh sách quỹ:', error);
+    res.status(500).json({ message: 'Không thể lấy danh sách quỹ.', error: error.message });
+  }
+};
+
 exports.getFundDetails = async (req, res) => {
   const fundId = req.params.fundId;
   const userId = req.user.userId;
@@ -84,7 +116,7 @@ exports.getFundDetails = async (req, res) => {
     const [fundRows] = await db.query(
       `SELECT f.*, u.email AS creator_email, u.username AS creator_username, c.name AS category_name
        FROM funds f
-       LEFT JOIN users u ON f.created_by_user_id = u.user_id
+       LEFT JOIN users u ON f.created_by_user_id = u.user.user_id
        LEFT JOIN categories c ON f.category_id = c.category_id
        WHERE f.fund_id = ?`,
       [fundId]
@@ -104,7 +136,7 @@ exports.getFundDetails = async (req, res) => {
     );
     fund.members = membersRows;
 
-    res.status(200).json({ fund });
+    res.status(200).json(fund); // Trả về trực tiếp fund object, không bọc trong { fund: fund }
 
   } catch (error) {
     console.error('Lỗi khi lấy chi tiết quỹ:', error);
