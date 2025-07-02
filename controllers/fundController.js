@@ -68,17 +68,17 @@ exports.createFund = async (req, res) => {
 };
 
 exports.getAllFunds = async (req, res) => {
-  const userId = req.user.userId;
+  const userId = req.user.userId; 
 
   try {
     const [funds] = await db.query(
       `SELECT f.*, u.email AS creator_email, u.username AS creator_username, c.name AS category_name
        FROM funds f
        JOIN funds_members fm ON f.fund_id = fm.fund_id
-       LEFT JOIN users u ON f.created_by_user_id = u.user_id
+       LEFT JOIN users u ON f.created_by_user_id = u.user_id  -- Đã sửa lỗi ở đây
        LEFT JOIN categories c ON f.category_id = c.category_id
        WHERE fm.user_id = ? AND fm.status = 'accepted'
-       ORDER BY f.created_at DESC`, 
+       ORDER BY f.created_at DESC`,
       [userId]
     );
 
@@ -92,6 +92,7 @@ exports.getAllFunds = async (req, res) => {
       );
       fund.members = membersRows;
     }
+
     res.status(200).json(funds);
   } catch (error) {
     console.error('Lỗi khi lấy danh sách quỹ:', error);
@@ -116,7 +117,7 @@ exports.getFundDetails = async (req, res) => {
     const [fundRows] = await db.query(
       `SELECT f.*, u.email AS creator_email, u.username AS creator_username, c.name AS category_name
        FROM funds f
-       LEFT JOIN users u ON f.created_by_user_id = u.user.user_id
+       LEFT JOIN users u ON f.created_by_user_id = u.user_id  -- Đã sửa lỗi ở đây
        LEFT JOIN categories c ON f.category_id = c.category_id
        WHERE f.fund_id = ?`,
       [fundId]
@@ -136,7 +137,7 @@ exports.getFundDetails = async (req, res) => {
     );
     fund.members = membersRows;
 
-    res.status(200).json(fund); // Trả về trực tiếp fund object, không bọc trong { fund: fund }
+    res.status(200).json(fund);
 
   } catch (error) {
     console.error('Lỗi khi lấy chi tiết quỹ:', error);
