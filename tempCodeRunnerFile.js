@@ -29,6 +29,9 @@ app.use("/settings", settingRoutes);
 
 app.use(express.json());
 
+const listEndpoints = require('express-list-endpoints');
+console.log(listEndpoints(app));
+
 
 const PORT = 3000;
 app.listen(PORT, () => {
