@@ -1,0 +1,113 @@
+const db = require('../config/db');
+
+exports.createFund = async (req, res) => {
+  const { name, description, has_target, target_amount, target_end_date, category_id } = req.body;
+  const created_by_user_id = req.user.userId;
+
+  const current_amount = 0.00; 
+
+  if (!name) {
+    return res.status(400).json({ message: 'Tên quỹ là bắt buộc.' });
+  }
+
+  if (has_target) { 
+    if (!target_amount || !target_end_date) {
+      return res.status(400).json({ message: 'Số tiền mục tiêu và ngày kết thúc là bắt buộc cho quỹ có mục tiêu.' });
+    }
+    if (new Date(target_end_date) <= new Date()) {
+      return res.status(400).json({ message: 'Ngày kết thúc mục tiêu phải ở trong tương lai.' });
+    }
+  }
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const fundInsertResult = await connection.query(
+      `INSERT INTO funds (category_id, name, description, created_by_user_id, current_amount, has_target, target_amount, target_end_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        category_id || null, 
+        name,
+        description,
+        created_by_user_id,
+        current_amount,
+        has_target ? 1 : 0, 
+        has_target ? target_amount : null, 
+        has_target ? target_end_date : null
+      ]
+    );
+
+    const newFundId = fundInsertResult[0].insertId;
+
+    await connection.query(
+      `INSERT INTO funds_members (fund_id, user_id, role, status)
+       VALUES (?, ?, ?, ?)`,
+      [newFundId, created_by_user_id, 'Admin', 'accepted']
+    );
+
+    await connection.commit();
+
+    const [newFundRows] = await db.query('SELECT * FROM funds WHERE fund_id = ?', [newFundId]);
+    const newFund = newFundRows[0];
+
+    res.status(201).json({ message: 'Quỹ đã được tạo thành công!', fund: newFund });
+
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error('Lỗi khi tạo quỹ:', error);
+    res.status(500).json({ message: 'Không thể tạo quỹ.', error: error.message });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+};
+
+exports.getFundDetails = async (req, res) => {
+  const fundId = req.params.fundId;
+  const userId = req.user.userId;
+
+  try {
+    const [memberRows] = await db.query(
+      `SELECT * FROM funds_members WHERE fund_id = ? AND user_id = ? AND status = 'accepted'`,
+      [fundId, userId]
+    );
+
+    if (memberRows.length === 0) {
+      return res.status(403).json({ message: 'Không có quyền: Bạn không phải là thành viên của quỹ này.' });
+    }
+
+    const [fundRows] = await db.query(
+      `SELECT f.*, u.email AS creator_email, u.username AS creator_username, c.name AS category_name
+       FROM funds f
+       LEFT JOIN users u ON f.created_by_user_id = u.user_id
+       LEFT JOIN categories c ON f.category_id = c.category_id
+       WHERE f.fund_id = ?`,
+      [fundId]
+    );
+
+    if (fundRows.length === 0) {
+      return res.status(404).json({ message: 'Không tìm thấy quỹ.' });
+    }
+    const fund = fundRows[0];
+
+    const [membersRows] = await db.query(
+      `SELECT fm.user_id, fm.role, fm.status, u.email, u.username
+       FROM funds_members fm
+       JOIN users u ON fm.user_id = u.user_id
+       WHERE fm.fund_id = ? AND fm.status = 'accepted'`,
+      [fundId]
+    );
+    fund.members = membersRows;
+
+    res.status(200).json({ fund });
+
+  } catch (error) {
+    console.error('Lỗi khi lấy chi tiết quỹ:', error);
+    res.status(500).json({ message: 'Không thể lấy chi tiết quỹ.', error: error.message });
+  }
+};
