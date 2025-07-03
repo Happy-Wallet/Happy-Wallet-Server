@@ -71,7 +71,7 @@ exports.getAllFunds = async (req, res) => {
 
   try {
     const [funds] = await db.query(
-      `SELECT f.*, u.email AS creator_email, u.username AS creator_username
+      `SELECT f.*, u.email AS creator_email, u.username AS creator_username, u.avatar_url AS creator_avatar_url
        FROM funds f
        JOIN funds_members fm ON f.fund_id = fm.fund_id
        LEFT JOIN users u ON f.created_by_user_id = u.user_id
@@ -83,13 +83,12 @@ exports.getAllFunds = async (req, res) => {
     const formattedFunds = funds.map(fund => ({
         ...fund,
         has_target: fund.has_target === 1 
-
     }));
 
 
-    for (let fund of formattedFunds) { // Sử dụng formattedFunds ở đây
+    for (let fund of formattedFunds) {
       const [membersRows] = await db.query(
-        `SELECT fm.user_id, fm.role, fm.status, u.email, u.username
+        `SELECT fm.user_id, fm.role, fm.status, u.email, u.username, u.avatar_url
          FROM funds_members fm
          JOIN users u ON fm.user_id = u.user_id
          WHERE fm.fund_id = ? AND fm.status = 'accepted'`,
@@ -123,7 +122,7 @@ exports.getFundDetails = async (req, res) => {
     }
 
     const [fundRows] = await db.query(
-      `SELECT f.*, u.email AS creator_email, u.username AS creator_username
+      `SELECT f.*, u.email AS creator_email, u.username AS creator_username, u.avatar_url AS creator_avatar_url
        FROM funds f
        LEFT JOIN users u ON f.created_by_user_id = u.user_id
        WHERE f.fund_id = ?`,
@@ -140,16 +139,16 @@ exports.getFundDetails = async (req, res) => {
 
 
     const [membersRows] = await db.query(
-      `SELECT fm.user_id, fm.role, fm.status, u.email, u.username
+      `SELECT fm.user_id, fm.role, fm.status, u.email, u.username, u.avatar_url
        FROM funds_members fm
        JOIN users u ON fm.user_id = u.user_id
-       WHERE fm.fund_id = ? AND fm.status = 'accepted'`, // Vẫn giữ 'accepted' nếu bạn chỉ muốn hiển thị thành viên chính thức
+       WHERE fm.fund_id = ? AND fm.status = 'accepted'`,
       [fundId]
     );
     fund.members = membersRows;
     console.log(`DEBUG: Fund ${fundId} details fetched successfully.`);
-    console.log('DEBUG: Formatted Fund data:', fund); // Log dữ liệu đã format
-    res.status(200).json(fund); // Gửi dữ liệu đã format
+    console.log('DEBUG: Formatted Fund data:', fund);
+    res.status(200).json(fund);
 
   } catch (error) {
     console.error('Lỗi khi lấy chi tiết quỹ:', error);
@@ -232,6 +231,133 @@ exports.updateFund = async (req, res) => {
     }
     console.error('Lỗi khi cập nhật quỹ:', error);
     res.status(500).json({ message: 'Không thể cập nhật quỹ.', error: error.message });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+};
+
+// --- CÁC HÀM MỚI CHO QUẢN LÝ THÀNH VIÊN ---
+
+// Xóa thành viên khỏi quỹ
+exports.removeMember = async (req, res) => {
+  const fundId = req.params.fundId;
+  const memberIdToRemove = req.params.memberId; // ID của thành viên cần xóa
+  const adminUserId = req.user.userId; // ID của người đang thực hiện thao tác (phải là Admin)
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    // 1. Kiểm tra xem người thực hiện có phải là Admin của quỹ không
+    const [adminCheck] = await connection.query(
+      `SELECT role, status FROM funds_members WHERE fund_id = ? AND user_id = ? AND role = 'Admin' AND status = 'accepted'`,
+      [fundId, adminUserId]
+    );
+
+    if (adminCheck.length === 0) {
+      await connection.rollback();
+      return res.status(403).json({ message: 'Không có quyền: Bạn không phải là quản trị viên của quỹ này.' });
+    }
+
+    // 2. Kiểm tra xem thành viên cần xóa có tồn tại trong quỹ không
+    const [memberCheck] = await connection.query(
+      `SELECT user_id, role FROM funds_members WHERE fund_id = ? AND user_id = ?`,
+      [fundId, memberIdToRemove]
+    );
+
+    if (memberCheck.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'Không tìm thấy thành viên trong quỹ này.' });
+    }
+
+    // 3. Không cho phép Admin tự xóa mình
+    if (parseInt(memberIdToRemove) === parseInt(adminUserId)) {
+        await connection.rollback();
+        return res.status(400).json({ message: 'Bạn không thể tự xóa mình khỏi quỹ.' });
+    }
+
+    // 4. Xóa thành viên
+    // (Tùy chọn: Thay vì DELETE, bạn có thể cập nhật `deleted_at` để lưu trữ lịch sử)
+    await connection.query(
+      `DELETE FROM funds_members WHERE fund_id = ? AND user_id = ?`,
+      [fundId, memberIdToRemove]
+    );
+
+    await connection.commit();
+    res.status(200).json({ message: 'Thành viên đã được xóa khỏi quỹ thành công.' });
+
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error('Lỗi khi xóa thành viên:', error);
+    res.status(500).json({ message: 'Không thể xóa thành viên.', error: error.message });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
+  }
+};
+
+// Cập nhật vai trò của thành viên trong quỹ
+exports.updateMemberRole = async (req, res) => {
+  const fundId = req.params.fundId;
+  const memberIdToUpdate = req.params.memberId; // ID của thành viên cần cập nhật vai trò
+  const newRole = req.body.role; // Vai trò mới: 'Admin' hoặc 'Member'
+  const adminUserId = req.user.userId; // ID của người đang thực hiện thao tác (phải là Admin)
+
+  // Kiểm tra vai trò mới hợp lệ
+  if (newRole !== 'Admin' && newRole !== 'Member') {
+    return res.status(400).json({ message: 'Vai trò không hợp lệ. Vai trò phải là "Admin" hoặc "Member".' });
+  }
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [adminCheck] = await connection.query(
+      `SELECT role, status FROM funds_members WHERE fund_id = ? AND user_id = ? AND role = 'Admin' AND status = 'accepted'`,
+      [fundId, adminUserId]
+    );
+
+    if (adminCheck.length === 0) {
+      await connection.rollback();
+      return res.status(403).json({ message: 'Không có quyền: Bạn không phải là quản trị viên của quỹ này.' });
+    }
+
+    const [memberCheck] = await connection.query(
+      `SELECT user_id, role FROM funds_members WHERE fund_id = ? AND user_id = ? AND status = 'accepted'`,
+      [fundId, memberIdToUpdate]
+    );
+
+    if (memberCheck.length === 0) {
+      await connection.rollback();
+      return res.status(404).json({ message: 'Không tìm thấy thành viên được chấp nhận trong quỹ này.' });
+    }
+
+    if (parseInt(memberIdToUpdate) === parseInt(adminUserId)) {
+        await connection.rollback();
+        return res.status(400).json({ message: 'Bạn không thể tự thay đổi vai trò của mình.' });
+    }
+
+    await connection.query(
+      `UPDATE funds_members SET role = ? WHERE fund_id = ? AND user_id = ?`,
+      [newRole, fundId, memberIdToUpdate]
+    );
+
+    await connection.commit();
+    res.status(200).json({ message: `Vai trò của thành viên đã được cập nhật thành "${newRole}" thành công.` });
+
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error('Lỗi khi cập nhật vai trò thành viên:', error);
+    res.status(500).json({ message: 'Không thể cập nhật vai trò thành viên.', error: error.message });
   } finally {
     if (connection) {
       connection.release();
