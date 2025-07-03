@@ -55,11 +55,9 @@ exports.createSavingGoal = async (req, res) => {
         ...rows[0],
       });
     } else {
-      res
-        .status(500)
-        .json({
-          error: "Failed to retrieve created saving goal after insertion.",
-        });
+      res.status(500).json({
+        error: "Failed to retrieve created saving goal after insertion.",
+      });
     }
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -155,6 +153,70 @@ exports.deleteSavingGoal = async (req, res) => {
 
     res.json({ message: "Saving goal deleted successfully" });
   } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+exports.addMoneyToSavingGoal = async (req, res) => {
+  const userId = req.user.userId;
+  const { id } = req.params; // goal_id
+  const { amount, date, description } = req.body;
+
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ message: "Invalid amount" });
+  }
+
+  try {
+    // 1. Lấy thông tin saving goal
+    const [goalRows] = await db.query(
+      `SELECT * FROM saving_goals WHERE goal_id = ? AND user_id = ?`,
+      [id, userId]
+    );
+
+    if (goalRows.length === 0) {
+      return res.status(404).json({ message: "Saving goal not found" });
+    }
+
+    const goal = goalRows[0];
+
+    // 2. Cập nhật current_amount
+    const newAmount = parseFloat(goal.current_amount) + parseFloat(amount);
+    await db.query(
+      `UPDATE saving_goals SET current_amount = ? WHERE goal_id = ?`,
+      [newAmount, id]
+    );
+
+    // 3. Tạo transaction với type = savingGoal
+    const [insertResult] = await db.query(
+      `INSERT INTO transactions (user_id, amount, type, category_id, date, description)
+       VALUES (?, ?, 'savingGoal', ?, ?, ?)`,
+      [
+        userId,
+        amount,
+        goal.category_id,
+        date || new Date(),
+        description || `Add to ${goal.name}`,
+      ]
+    );
+
+    const transactionId = insertResult.insertId;
+
+    const [transactionRows] = await db.query(
+      `SELECT * FROM transactions WHERE transaction_id = ?`,
+      [transactionId]
+    );
+
+    // 4. Trả về kết quả
+    return res.status(201).json({
+      message: "Money added successfully",
+      updated_goal: {
+        ...goal,
+        current_amount: newAmount,
+      },
+      transaction: transactionRows[0],
+    });
+  } catch (err) {
+    console.error("Error in addMoneyToSavingGoal:", err);
     res.status(500).json({ error: err.message });
   }
 };
