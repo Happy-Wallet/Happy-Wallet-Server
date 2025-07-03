@@ -4,13 +4,13 @@ exports.createFund = async (req, res) => {
   const { name, description, has_target, target_amount, target_end_date } = req.body;
   const created_by_user_id = req.user.userId;
 
-  const current_amount = 0.00; 
+  const current_amount = 0.00;
 
   if (!name) {
     return res.status(400).json({ message: 'Tên quỹ là bắt buộc.' });
   }
 
-  if (has_target) { 
+  if (has_target) {
     if (!target_amount || !target_end_date) {
       return res.status(400).json({ message: 'Số tiền mục tiêu và ngày kết thúc là bắt buộc cho quỹ có mục tiêu.' });
     }
@@ -32,8 +32,8 @@ exports.createFund = async (req, res) => {
         description,
         created_by_user_id,
         current_amount,
-        has_target ? 1 : 0, 
-        has_target ? target_amount : null, 
+        has_target ? 1 : 0,
+        has_target ? target_amount : null,
         has_target ? target_end_date : null
       ]
     );
@@ -67,7 +67,7 @@ exports.createFund = async (req, res) => {
 };
 
 exports.getAllFunds = async (req, res) => {
-  const userId = req.user.userId; 
+  const userId = req.user.userId;
 
   try {
     const [funds] = await db.query(
@@ -80,7 +80,14 @@ exports.getAllFunds = async (req, res) => {
       [userId]
     );
 
-    for (let fund of funds) {
+    const formattedFunds = funds.map(fund => ({
+        ...fund,
+        has_target: fund.has_target === 1 
+
+    }));
+
+
+    for (let fund of formattedFunds) { // Sử dụng formattedFunds ở đây
       const [membersRows] = await db.query(
         `SELECT fm.user_id, fm.role, fm.status, u.email, u.username
          FROM funds_members fm
@@ -91,7 +98,8 @@ exports.getAllFunds = async (req, res) => {
       fund.members = membersRows;
     }
 
-    res.status(200).json(funds);
+    res.status(200).json(formattedFunds);
+
   } catch (error) {
     console.error('Lỗi khi lấy danh sách quỹ:', error);
     res.status(500).json({ message: 'Không thể lấy danh sách quỹ.', error: error.message });
@@ -101,15 +109,17 @@ exports.getAllFunds = async (req, res) => {
 exports.getFundDetails = async (req, res) => {
   const fundId = req.params.fundId;
   const userId = req.user.userId;
+  console.log(`DEBUG: API GET /funds/${fundId} called for userId: ${userId}`);
 
   try {
     const [memberRows] = await db.query(
-      `SELECT * FROM funds_members WHERE fund_id = ? AND user_id = ? AND status = 'accepted'`,
+      `SELECT * FROM funds_members WHERE fund_id = ? AND user_id = ? AND (status = 'accepted' OR status = 'pending')`,
       [fundId, userId]
     );
 
     if (memberRows.length === 0) {
-      return res.status(403).json({ message: 'Không có quyền: Bạn không phải là thành viên của quỹ này.' });
+      console.warn(`WARN: User ${userId} is not an accepted or pending member of fund ${fundId}.`);
+      return res.status(403).json({ message: 'Không có quyền: Bạn không phải là thành viên hoặc lời mời của bạn chưa được chấp nhận.' });
     }
 
     const [fundRows] = await db.query(
@@ -121,20 +131,25 @@ exports.getFundDetails = async (req, res) => {
     );
 
     if (fundRows.length === 0) {
+      console.warn(`WARN: Fund ${fundId} not found.`);
       return res.status(404).json({ message: 'Không tìm thấy quỹ.' });
     }
-    const fund = fundRows[0];
+    let fund = fundRows[0];
+
+    fund.has_target = fund.has_target === 1;
+
 
     const [membersRows] = await db.query(
       `SELECT fm.user_id, fm.role, fm.status, u.email, u.username
        FROM funds_members fm
        JOIN users u ON fm.user_id = u.user_id
-       WHERE fm.fund_id = ? AND fm.status = 'accepted'`,
+       WHERE fm.fund_id = ? AND fm.status = 'accepted'`, // Vẫn giữ 'accepted' nếu bạn chỉ muốn hiển thị thành viên chính thức
       [fundId]
     );
     fund.members = membersRows;
-
-    res.status(200).json(fund);
+    console.log(`DEBUG: Fund ${fundId} details fetched successfully.`);
+    console.log('DEBUG: Formatted Fund data:', fund); // Log dữ liệu đã format
+    res.status(200).json(fund); // Gửi dữ liệu đã format
 
   } catch (error) {
     console.error('Lỗi khi lấy chi tiết quỹ:', error);
@@ -144,7 +159,7 @@ exports.getFundDetails = async (req, res) => {
 
 exports.updateFund = async (req, res) => {
   const fundId = req.params.fundId;
-  const userId = req.user.userId; 
+  const userId = req.user.userId;
   const { name, description, target_amount, target_end_date } = req.body;
 
   if (!name) {
@@ -176,7 +191,7 @@ exports.updateFund = async (req, res) => {
         return res.status(404).json({ message: 'Không tìm thấy quỹ.' });
     }
 
-    const currentHasTarget = currentFundRows[0].has_target; 
+    const currentHasTarget = currentFundRows[0].has_target;
 
     let finalTargetAmount = null;
     let finalTargetEndDate = null;
