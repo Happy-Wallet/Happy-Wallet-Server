@@ -1,7 +1,7 @@
 const db = require('../config/db');
 
 exports.createFund = async (req, res) => {
-  const { name, description, has_target, target_amount, target_end_date, category_id } = req.body;
+  const { name, description, has_target, target_amount, target_end_date } = req.body;
   const created_by_user_id = req.user.userId;
 
   const current_amount = 0.00; 
@@ -25,10 +25,9 @@ exports.createFund = async (req, res) => {
     await connection.beginTransaction();
 
     const fundInsertResult = await connection.query(
-      `INSERT INTO funds (category_id, name, description, created_by_user_id, current_amount, has_target, target_amount, target_end_date)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO funds (name, description, created_by_user_id, current_amount, has_target, target_amount, target_end_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
-        category_id || null, 
         name,
         description,
         created_by_user_id,
@@ -72,11 +71,10 @@ exports.getAllFunds = async (req, res) => {
 
   try {
     const [funds] = await db.query(
-      `SELECT f.*, u.email AS creator_email, u.username AS creator_username, c.name AS category_name
+      `SELECT f.*, u.email AS creator_email, u.username AS creator_username
        FROM funds f
        JOIN funds_members fm ON f.fund_id = fm.fund_id
-       LEFT JOIN users u ON f.created_by_user_id = u.user_id  -- Đã sửa lỗi ở đây
-       LEFT JOIN categories c ON f.category_id = c.category_id
+       LEFT JOIN users u ON f.created_by_user_id = u.user_id
        WHERE fm.user_id = ? AND fm.status = 'accepted'
        ORDER BY f.created_at DESC`,
       [userId]
@@ -115,10 +113,9 @@ exports.getFundDetails = async (req, res) => {
     }
 
     const [fundRows] = await db.query(
-      `SELECT f.*, u.email AS creator_email, u.username AS creator_username, c.name AS category_name
+      `SELECT f.*, u.email AS creator_email, u.username AS creator_username
        FROM funds f
-       LEFT JOIN users u ON f.created_by_user_id = u.user_id  -- Đã sửa lỗi ở đây
-       LEFT JOIN categories c ON f.category_id = c.category_id
+       LEFT JOIN users u ON f.created_by_user_id = u.user_id
        WHERE f.fund_id = ?`,
       [fundId]
     );
@@ -142,5 +139,87 @@ exports.getFundDetails = async (req, res) => {
   } catch (error) {
     console.error('Lỗi khi lấy chi tiết quỹ:', error);
     res.status(500).json({ message: 'Không thể lấy chi tiết quỹ.', error: error.message });
+  }
+};
+
+exports.updateFund = async (req, res) => {
+  const fundId = req.params.fundId;
+  const userId = req.user.userId; 
+  const { name, description, target_amount, target_end_date } = req.body;
+
+  if (!name) {
+    return res.status(400).json({ message: 'Tên quỹ là bắt buộc.' });
+  }
+
+  let connection;
+  try {
+    connection = await db.getConnection();
+    await connection.beginTransaction();
+
+    const [memberRows] = await connection.query(
+      `SELECT * FROM funds_members WHERE fund_id = ? AND user_id = ? AND role = 'Admin' AND status = 'accepted'`,
+      [fundId, userId]
+    );
+
+    if (memberRows.length === 0) {
+      await connection.rollback();
+      return res.status(403).json({ message: 'Không có quyền: Bạn không phải là quản trị viên của quỹ này.' });
+    }
+
+    const [currentFundRows] = await connection.query(
+        `SELECT has_target FROM funds WHERE fund_id = ?`,
+        [fundId]
+    );
+
+    if (currentFundRows.length === 0) {
+        await connection.rollback();
+        return res.status(404).json({ message: 'Không tìm thấy quỹ.' });
+    }
+
+    const currentHasTarget = currentFundRows[0].has_target; 
+
+    let finalTargetAmount = null;
+    let finalTargetEndDate = null;
+
+    if (currentHasTarget === 1) {
+        if (!target_amount || !target_end_date) {
+            await connection.rollback();
+            return res.status(400).json({ message: 'Số tiền mục tiêu và ngày kết thúc là bắt buộc cho quỹ có mục tiêu.' });
+        }
+        if (new Date(target_end_date) <= new Date()) {
+            await connection.rollback();
+            return res.status(400).json({ message: 'Ngày kết thúc mục tiêu phải ở trong tương lai.' });
+        }
+        finalTargetAmount = target_amount;
+        finalTargetEndDate = target_end_date;
+    }
+
+    await connection.query(
+      `UPDATE funds
+       SET name = ?, description = ?, target_amount = ?, target_end_date = ?, updated_at = CURRENT_TIMESTAMP
+       WHERE fund_id = ?`,
+      [
+        name,
+        description,
+        finalTargetAmount,
+        finalTargetEndDate,
+        fundId
+      ]
+    );
+
+    await connection.commit();
+
+    res.status(200).json({ message: 'Quỹ đã được cập nhật thành công!' });
+
+  } catch (error) {
+    if (connection) {
+      await connection.rollback();
+    }
+    console.error('Lỗi khi cập nhật quỹ:', error);
+    res.status(500).json({ message: 'Không thể cập nhật quỹ.', error: error.message });
+  } finally {
+    if (connection) {
+      connection.release();
+    }
   }
 };
