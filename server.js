@@ -1,3 +1,4 @@
+// server.js
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -12,7 +13,12 @@ const iconDocsRoutes = require("./routes/Docs");
 const settingRoutes = require("./routes/setting");
 const invitationRoutes = require("./routes/invitation");
 const notificationRoutes = require("./routes/notification");
+
 const fundTransactionRoutes = require("./routes/fundTransaction");
+
+const postRoutes = require("./routes/post");
+const commentRoutes = require("./routes/comment"); 
+const fundActivityRoutes = require("./routes/fundActivity"); 
 
 const app = express();
 app.use(cors());
@@ -30,7 +36,13 @@ app.use("/docs", iconDocsRoutes);
 app.use("/settings", settingRoutes);
 app.use("/invitations", invitationRoutes);
 app.use("/notifications", notificationRoutes);
+
 app.use("/fund_transactions", fundTransactionRoutes);
+
+app.use("/posts", postRoutes); 
+app.use("/comments", commentRoutes);
+app.use("/fund-activities", fundActivityRoutes); 
+
 
 const PORT = 3000;
 app.listen(PORT, () => {
