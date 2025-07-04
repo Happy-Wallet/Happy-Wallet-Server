@@ -10,11 +10,5 @@ router.delete("/:fundId/transactions/:transactionId", authMiddleware, fundTransa
 
 router.get("/:fundId/contributions", authMiddleware, fundTransactionController.getMemberContributions);
 
-router.get("/:fundId", (req, res, next) => {
-    console.log("Đã nhận GET /fund_transactions/:fundId với id =", req.params.fundId);
-    next();
-  }, authMiddleware, fundTransactionController.getFundTransactions);
-  
-
 
 module.exports = router;
