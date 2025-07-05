@@ -13,7 +13,7 @@ Cài đặt dependencies:
 
 bash
 npm install
-npm install express body-parser cors dotenv mysql2 jsonwebtoken bcryptjs nodemailer
+npm install bcrypt bcryptjs body-parser cloudinary cors dotenv express jsonwebtoken multer mysql mysql2 nodemailer nodemon streamifier
 
 
 ⚙️ Tạo file .env
@@ -23,18 +23,22 @@ env
 # Cấu hình MySQL
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=123456
+DB_PASSWORD=
 DB_NAME=financialtrackingapp
-
+JWT_SECRET=your_jwt_secret_key
 # Cấu hình email (dùng để gửi mã khôi phục)
-EMAIL_USER=giathien899@gmail.com
-EMAIL_PASS=****************
+EMAIL_USER=hoanghaiyencbm@gmail.com
+EMAIL_PASS=owlcyqucwcthczim
 
 # JWT token secret
 JWT_SECRET=your_jwt_secret_key
 
 # Cổng server
 PORT=3000
+
+YOUR_CLOUD_NAME=dmutcpoey
+YOUR_API_KEY=561217229222356
+YOUR_API_SECRET=sBBJslheYSYDXSCBmwFbPJhMFbE
 
 🛡️ Lưu ý: Không push file .env lên GitHub — hãy đảm bảo .gitignore có dòng *.env
 
@@ -43,38 +47,6 @@ bash
 node server.js
 Server sẽ chạy tại địa chỉ: http://localhost:3000
 
-🔌 Danh sách API
-Phương thức	Endpoint	Mô tả
-POST	/register	Đăng ký người dùng mới
-POST	/login	Đăng nhập
-POST	/forgot-password	Gửi email để đặt lại mật khẩu
-POST	/reset-password	Đặt lại mật khẩu với token
-
-📁 Cấu trúc thư mục (gợi ý)
-pgsql
-
-Happy-Wallet-Server/
-├── config/
-│   ├──db.js
-│   └──mailConfig.js
-├── controllers/
-│   ├──authController.js
-│   └──iconController.js
-├── routes/
-│   ├── auth.js
-│   ├── category.js
-│   ├── Docs.js
-│   ├── fund.js
-│   ├── icon.js
-│   ├── savingGoal.js
-│   ├── transaction.js
-│   └── user.js
-├── server.js
-├── .env
-├── .gitignore
-├── package.json
-├── package-lock.json
-└── README.md
 🧰 Dependencies chính
 express – Framework xây dựng web API
 
