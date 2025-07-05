@@ -1,6 +1,6 @@
 const db = require("../config/db");
-const cloudinary = require("../utils/cloudinary"); 
-const multer = require('multer'); 
+const cloudinary = require("../utils/cloudinary");
+const multer = require('multer');
 
 const upload = multer({ storage: multer.memoryStorage() });
 
@@ -16,8 +16,8 @@ exports.createPost = async (req, res) => {
     let activity_ids = [];
     if (activity_ids_raw) {
         try {
-            activity_ids = JSON.parse(activity_ids_raw); 
-            if (!Array.isArray(activity_ids)) { 
+            activity_ids = JSON.parse(activity_ids_raw);
+            if (!Array.isArray(activity_ids)) {
                 throw new Error("Parsed activity_ids is not an array.");
             }
         } catch (e) {
@@ -30,7 +30,7 @@ exports.createPost = async (req, res) => {
     let imageUrl = null;
 
     try {
-        if (req.file) { 
+        if (req.file) {
             const result = await cloudinary.uploader.upload(
                 `data:${req.file.mimetype};base64,${req.file.buffer.toString('base64')}`,
                 { folder: "posts" }
@@ -48,17 +48,35 @@ exports.createPost = async (req, res) => {
 
         if (activity_ids.length > 0) {
             const values = activity_ids.map(id => [insertedPostId, id]);
+            // TODO: Bạn cần chèn các hoạt động vào bảng post_activities hoặc một bảng liên kết khác
+            // Hiện tại code này chỉ log mà chưa insert vào DB
             console.log(`Associated post ${insertedPostId} with activities:`, activity_ids);
         }
 
         const [newPostRows] = await db.query(
-            "SELECT p.*, u.username, u.avatar_url FROM posts p JOIN users u ON p.user_id = u.user_id WHERE p.post_id = ?",
+            "SELECT p.*, u.username, u.avatar_url, u.email, u.user_id as user_actual_id FROM posts p JOIN users u ON p.user_id = u.user_id WHERE p.post_id = ?",
             [insertedPostId]
         );
 
+        // Đảm bảo trả về cấu trúc user lồng vào cho createPost
+        const createdPost = newPostRows[0];
         res.status(201).json({
             message: "Post created successfully",
-            post: newPostRows[0],
+            post: {
+                postId: createdPost.post_id,
+                userId: createdPost.user_id,
+                imageUrl: createdPost.image_url,
+                caption: createdPost.caption,
+                createdAt: createdPost.created_at,
+                updatedAt: createdPost.updated_at,
+                deletedAt: createdPost.deleted_at,
+                user: {
+                    userId: createdPost.user_actual_id, // Sử dụng user_actual_id hoặc u.user_id
+                    username: createdPost.username,
+                    avatarUrl: createdPost.avatar_url,
+                    email: createdPost.email
+                }
+            },
         });
 
     } catch (err) {
@@ -67,27 +85,12 @@ exports.createPost = async (req, res) => {
     }
 };
 
-exports.getPosts = async (req, res) => {
-  try {
-    const [posts] = await db.query(`
-      SELECT p.*, u.username, u.avatar_url
-      FROM posts p
-      JOIN users u ON p.user_id = u.user_id
-      WHERE p.deleted_at IS NULL
-      ORDER BY p.created_at DESC
-    `);
-    res.json(posts);
-  } catch (err) {
-    console.error("Error fetching posts:", err);
-    res.status(500).json({ error: "Server error fetching posts." });
-  }
-};
-
+// Cập nhật exports.getPosts để trả về user object nhất quán
 exports.getPosts = async (req, res) => {
   try {
     const [posts] = await db.query(`
       SELECT p.post_id, p.user_id, p.image_url, p.caption, p.created_at, p.updated_at, p.deleted_at,
-             u.user_id as user_id_alias, u.username as user_username_alias, u.avatar_url as user_avatar_url_alias, u.email as user_email_alias
+             u.user_id AS user_id_data, u.username AS user_username_data, u.avatar_url AS user_avatar_url_data, u.email AS user_email_data
       FROM posts p
       JOIN users u ON p.user_id = u.user_id
       WHERE p.deleted_at IS NULL
@@ -95,25 +98,26 @@ exports.getPosts = async (req, res) => {
     `);
 
     const formattedPosts = posts.map(post => {
-        const activities = []; 
-        const comments = [];  
+        // Khởi tạo rỗng, getPosts không fetch chi tiết activities/comments
+        const activities = [];
+        const comments = [];
 
         return {
             postId: post.post_id,
-            userId: post.user_id,
+            userId: post.user_id, // Đây là user_id của post, không phải từ user object
             imageUrl: post.image_url,
             caption: post.caption,
             createdAt: post.created_at,
             updatedAt: post.updated_at,
             deletedAt: post.deleted_at,
-            user: { // TẠO ĐỐI TƯỢNG USER LỒNG VÀO ĐÂY VỚI CÁC TRƯỜNG ĐÚNG
-                userId: post.user_id_alias,
-                username: post.user_username_alias,
-                avatarUrl: post.user_avatar_url_alias,
-                email: post.user_email_alias
+            user: { // Tạo đối tượng user lồng vào với tên trường chuẩn
+                userId: post.user_id_data,
+                username: post.user_username_data,
+                avatarUrl: post.user_avatar_url_data,
+                email: post.user_email_data
             },
-            activities: activities, // Gán mảng activities
-            comments: comments      // Gán mảng comments
+            activities: activities,
+            comments: comments
         };
     });
 
@@ -129,7 +133,7 @@ exports.getPostById = async (req, res) => {
   try {
     const [postRows] = await db.query(`
       SELECT p.post_id, p.user_id, p.image_url, p.caption, p.created_at, p.updated_at, p.deleted_at,
-             u.user_id as user_id_alias, u.username as user_username_alias, u.avatar_url as user_avatar_url_alias, u.email as user_email_alias
+             u.user_id AS user_id_data, u.username AS user_username_data, u.avatar_url AS user_avatar_url_data, u.email AS user_email_data
       FROM posts p
       JOIN users u ON p.user_id = u.user_id
       WHERE p.post_id = ? AND p.deleted_at IS NULL
@@ -141,22 +145,24 @@ exports.getPostById = async (req, res) => {
 
     const post = postRows[0];
 
+    // TODO: Hiện tại bạn đang lấy activities theo user_id của người đăng bài.
+    // Nếu bạn muốn các hoạt động liên quan trực tiếp đến post, bạn cần một bảng post_activities.
     const [activities] = await db.query(`
         SELECT fa.activity_id, fa.fund_id, fa.user_id, fa.transaction_id, fa.fund_transaction_id, fa.type as activity_type, fa.amount, fa.description, fa.created_at,
-               f.name as fund_name, -- Join bảng funds để lấy tên quỹ
-               u.user_id as user_id_alias, u.username as user_username_alias, u.avatar_url as user_avatar_url_alias
+               f.name as fund_name,
+               u.user_id as user_id_data, u.username as user_username_data, u.avatar_url as user_avatar_url_data
         FROM fund_activities fa
-        LEFT JOIN funds f ON fa.fund_id = f.fund_id -- Join để lấy tên quỹ
+        LEFT JOIN funds f ON fa.fund_id = f.fund_id
         JOIN users u ON fa.user_id = u.user_id
-        WHERE fa.user_id = ? -- Hoặc liên kết với post_id nếu có bảng post_activities
+        WHERE fa.user_id = ?
         ORDER BY fa.created_at DESC
-        LIMIT 5 -- Lấy nhiều hơn để test
+        LIMIT 5
     `, [post.user_id]);
 
 
     const [comments] = await db.query(`
       SELECT c.comment_id, c.post_id, c.user_id, c.comment_text, c.created_at,
-             u.user_id as user_id_alias, u.username as user_username_alias, u.avatar_url as user_avatar_url_alias
+             u.user_id as user_id_data, u.username as user_username_data, u.avatar_url as user_avatar_url_data
       FROM comments c
       JOIN users u ON c.user_id = u.user_id
       WHERE c.post_id = ? AND c.deleted_at IS NULL
@@ -171,11 +177,11 @@ exports.getPostById = async (req, res) => {
       createdAt: post.created_at,
       updatedAt: post.updated_at,
       deletedAt: post.deleted_at,
-      user: { 
-        userId: post.user_id_alias,
-        email: post.user_email_alias,
-        username: post.user_username_alias,
-        avatarUrl: post.user_avatar_url_alias
+      user: { // Tạo đối tượng user lồng vào với tên trường chuẩn
+        userId: post.user_id_data,
+        email: post.user_email_data,
+        username: post.user_username_data,
+        avatarUrl: post.user_avatar_url_data
       },
       activities: activities.map(act => ({
         activityId: act.activity_id,
@@ -184,14 +190,14 @@ exports.getPostById = async (req, res) => {
         transactionId: act.transaction_id,
         fundTransactionId: act.fund_transaction_id,
         activityType: act.activity_type,
-        amount: act.amount ? parseFloat(act.amount) : null, 
+        amount: act.amount ? parseFloat(act.amount) : null,
         description: act.description,
         createdAt: act.created_at,
         fundName: act.fund_name,
-        user: {
-            userId: act.user_id_alias,
-            username: act.user_username_alias,
-            avatarUrl: act.user_avatar_url_alias
+        user: { // User của activity cũng cần được chuẩn hóa
+            userId: act.user_id_data,
+            username: act.user_username_data,
+            avatarUrl: act.user_avatar_url_data
         }
       })),
       comments: comments.map(comm => ({
@@ -200,10 +206,10 @@ exports.getPostById = async (req, res) => {
         userId: comm.user_id,
         commentText: comm.comment_text,
         createdAt: comm.created_at,
-        user: {
-            userId: comm.user_id_alias,
-            username: comm.user_username_alias,
-            avatarUrl: comm.user_avatar_url_alias
+        user: { // User của comment cũng cần được chuẩn hóa
+            userId: comm.user_id_data,
+            username: comm.user_username_data,
+            avatarUrl: comm.user_avatar_url_data
         }
       }))
     };
@@ -231,7 +237,7 @@ exports.updatePost = async (req, res) => {
     }
 
     await db.query(
-      "UPDATE posts SET caption = ?, image_url = ? WHERE post_id = ?",
+      "UPDATE posts SET caption = ?, image_url = ?, updated_at = CURRENT_TIMESTAMP() WHERE post_id = ?",
       [caption, imageUrl, id]
     );
     res.json({ message: "Post updated successfully" });
@@ -282,12 +288,11 @@ exports.createPostNoImage = async (req, res) => {
         }
     }
 
-    // Kiểm tra và xử lý lỗi nếu caption là undefined
     if (caption === undefined) {
         return res.status(400).json({ message: "Caption is missing in the request." });
     }
 
-    const userId = req.user.userId; // Lấy userId từ token đã xác thực
+    const userId = req.user.userId;
 
     try {
         const [insertPostResult] = await db.query(
@@ -298,16 +303,35 @@ exports.createPostNoImage = async (req, res) => {
 
         if (activity_ids.length > 0) {
             const values = activity_ids.map(id => [insertedPostId, id]);
+            // TODO: Bạn cần chèn các hoạt động vào bảng post_activities hoặc một bảng liên kết khác
+            // Hiện tại code này chỉ log mà chưa insert vào DB
             console.log(`Associated post ${insertedPostId} with activities (no image):`, activity_ids);
         }
 
         const [newPostRows] = await db.query(
-            "SELECT p.*, u.username, u.avatar_url FROM posts p JOIN users u ON p.user_id = u.user_id WHERE p.post_id = ?",
+            "SELECT p.*, u.username, u.avatar_url, u.email, u.user_id as user_actual_id FROM posts p JOIN users u ON p.user_id = u.user_id WHERE p.post_id = ?",
             [insertedPostId]
         );
+
+        // Đảm bảo trả về cấu trúc user lồng vào cho createPostNoImage
+        const createdPost = newPostRows[0];
         res.status(201).json({
             message: "Post created successfully without image",
-            post: newPostRows[0],
+            post: {
+                postId: createdPost.post_id,
+                userId: createdPost.user_id,
+                imageUrl: createdPost.image_url, // Sẽ là null
+                caption: createdPost.caption,
+                createdAt: createdPost.created_at,
+                updatedAt: createdPost.updated_at,
+                deletedAt: createdPost.deleted_at,
+                user: {
+                    userId: createdPost.user_actual_id,
+                    username: createdPost.username,
+                    avatarUrl: createdPost.avatar_url,
+                    email: createdPost.email
+                }
+            },
         });
     } catch (err) {
         console.error("Error creating post without image:", err);

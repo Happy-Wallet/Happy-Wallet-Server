@@ -17,13 +17,30 @@ exports.addComment = async (req, res) => {
     );
 
     const [newCommentRows] = await db.query(
-      "SELECT c.*, u.username, u.avatar_url FROM comments c JOIN users u ON c.user_id = u.user_id WHERE c.comment_id = ?",
+      `SELECT c.comment_id, c.post_id, c.user_id, c.comment_text, c.created_at,
+              u.user_id AS user_id_data, u.username AS user_username_data, u.avatar_url AS user_avatar_url_data, u.email AS user_email_data
+       FROM comments c
+       JOIN users u ON c.user_id = u.user_id
+       WHERE c.comment_id = ?`,
       [result.insertId]
     );
 
+    const createdComment = newCommentRows[0];
     res.status(201).json({
       message: "Comment added successfully",
-      comment: newCommentRows[0],
+      comment: {
+          commentId: createdComment.comment_id,
+          postId: createdComment.post_id,
+          userId: createdComment.user_id,
+          commentText: createdComment.comment_text,
+          createdAt: createdComment.created_at,
+          user: { 
+              userId: createdComment.user_id_data,
+              username: createdComment.user_username_data,
+              avatarUrl: createdComment.user_avatar_url_data,
+              email: createdComment.user_email_data
+          }
+      },
     });
   } catch (err) {
     console.error("Error adding comment:", err);
@@ -36,18 +53,35 @@ exports.getCommentsByPost = async (req, res) => {
 
   try {
     const [comments] = await db.query(`
-      SELECT c.*, u.username, u.avatar_url
+      SELECT c.comment_id, c.post_id, c.user_id, c.comment_text, c.created_at,
+             u.user_id AS user_id_data, u.username AS user_username_data, u.avatar_url AS user_avatar_url_data, u.email AS user_email_data
       FROM comments c
       JOIN users u ON c.user_id = u.user_id
       WHERE c.post_id = ? AND c.deleted_at IS NULL
       ORDER BY c.created_at ASC
     `, [postId]);
-    res.json(comments);
+
+    const formattedComments = comments.map(comment => ({
+        commentId: comment.comment_id,
+        postId: comment.post_id,
+        userId: comment.user_id,
+        commentText: comment.comment_text,
+        createdAt: comment.created_at,
+        user: { 
+            userId: comment.user_id_data,
+            username: comment.user_username_data,
+            avatarUrl: comment.user_avatar_url_data,
+            email: comment.user_email_data
+        }
+    }));
+
+    res.json(formattedComments); 
   } catch (err) {
     console.error("Error fetching comments:", err);
     res.status(500).json({ error: "Server error fetching comments." });
   }
 };
+
 
 exports.updateComment = async (req, res) => {
   const { commentId } = req.params;
